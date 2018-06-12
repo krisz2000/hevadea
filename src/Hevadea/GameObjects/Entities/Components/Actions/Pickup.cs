@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using Hevadea.Registry;
+using System.Linq;
 
 namespace Hevadea.GameObjects.Entities.Components.Actions
 {
@@ -55,14 +56,17 @@ namespace Hevadea.GameObjects.Entities.Components.Actions
         {
             var facingTile = Owner.GetFacingTile();
 
-            if (Owner.Level.GetEntitiesAt(facingTile).Count != 0 || !facingTile.InLevelBound(Owner.Level)) return false;
+            if (_pickupedEntity != null && !Owner.Level.GetEntitiesAt(facingTile).Any() && facingTile.InLevelBound(Owner.Level))
+            {
+                _pickupedEntity.Facing = Owner.Facing;
+                Owner.Level.AddEntityAt(_pickupedEntity, facingTile.X, facingTile.Y);
+                _pickupedEntity.GetComponent<Agent>()?.Abort(AgentAbortReason.PickedUp);
+                _pickupedEntity = null;
 
-            _pickupedEntity.Facing = Owner.Facing;
-            Owner.Level.AddEntityAt(_pickupedEntity, facingTile.X, facingTile.Y);
-            _pickupedEntity.GetComponent<Agent>()?.Abort(AgentAbortReason.PickedUp);
-            _pickupedEntity = null;
+                return true;
+            }
 
-            return true;
+            return false;
         }
 
         public void Draw(SpriteBatch spriteBatch, GameTime gameTime)
@@ -84,7 +88,7 @@ namespace Hevadea.GameObjects.Entities.Components.Actions
 
         public void OnGameLoad(EntityStorage store)
         {
-            var entityType = (string)store.ValueOf<string>("pickup_entity_type", "null");
+            var entityType = store.ValueOf("pickup_entity_type", "null");
 
             if (entityType != "null")
             {
